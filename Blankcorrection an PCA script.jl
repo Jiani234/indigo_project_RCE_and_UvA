@@ -13,78 +13,60 @@ T1 = "PCA"              # PCA or PLSDA
 
 ## Matrix clean up
 # Blanco signal correction
-function blanco_clean_up(data_mat)                                          # data_mat = ss1_pos_Intensities of een andere
-    blanco = contains.(names(data_mat),"Blanco")                            # Blanco eruit filteren voor de correctie
-    standaard = contains.(names(data_mat),"Coch")                           # Coch eruit
-    ADD = contains.(names(data_mat),"ADD")                                  # ADD samples eruit filteren
+function blanco_clean_up(data_mat)                      # data_mat = ss1_pos_Intensities of een andere
+    blanco = contains.(names(data_mat),"Blanco")        # Blanco eruit filteren voor de correctie
+    standaard = contains.(names(data_mat),"Coch")       # Coch calibration sample filter
+    ADD = contains.(names(data_mat),"ADD")              # ADD sample filter
     MME = contains.(names(data_mat),"MME")
     sLPE = contains.(names(data_mat),"sLPE")
     SS1 = contains.(names(data_mat),"SS1")
     SS2 = contains.(names(data_mat),"SS2")
-    SS3 = contains.(names(data_mat),"SS3") 
-    AsB15 = contains.(names(data_mat),"AsB 15")
-    AsB16 = contains.(names(data_mat),"AsB 16")
-    AsB17 = contains.(names(data_mat),"AsB 17")
-    AsB18 = contains.(names(data_mat),"AsB 18")
-    AsB19 = contains.(names(data_mat),"AsB 19")
-    AsB20 = contains.(names(data_mat),"AsB 20")
-    AsB21 = contains.(names(data_mat),"AsB 21")
-    AsB22 = contains.(names(data_mat),"AsB 22")
-    AsB23 = contains.(names(data_mat),"AsB 23")
+    SS3 = contains.(names(data_mat),"SS3")
+    Margriet = contains.(names(data_mat),"M ")
+    ACIAR = contains.(names(data_mat),"ACIAR")
+    WrB = contains.(names(data_mat),"WrB")
+    trade = contains.(names(data_mat),"trade")
+    
+    samples = contains.(names(data_mat),"SS") .& (.! blanco) .& (.! standaard) # First part selecting the data and second part erasing/converting the other data to 0 
+    
+    m = mean(Matrix(data_mat[:, blanco]), dims=2)           # Mean berekening van de 2e dims --> alle rijen
 
-    samples = contains.(names(data_mat),"SS") .& (.! blanco) .& (.! standaard) .& (.! SS2) .& (.! ADD)
-    
-    #.& (.! AsB15) .& (.! AsB16) .& (.! AsB17) .& (.! AsB18) .& (.! AsB19) .& (.! AsB20) .& (.! AsB21) .& (.! AsB22) .& (.! AsB23) .& (.! ADD)
-    
-    
-    #.& (.! ADD)
-    
-    #.& (.! MME)
-    
-    #.& (.! AsB15) .& (.! AsB16) .& (.! AsB17) .& (.! AsB18) .& (.! AsB19) .& (.! AsB20) .& (.! AsB21) .& (.! AsB22) .& (.! AsB23) .& (.! ADD)
-    #.& (.! ADD)  # Eerste stuk = samples eruit filteren --> 1 .& zorgt ervoor dat de samples de inverse worden van de blanco hiervoor --> 1 = 0
-    #.& ("SS2") .& ("SS1")
-    
-    m = mean(Matrix(data_mat[:, blanco]), dims=2)                           # Mean berekening van de 2e dims --> alle rijen
-
-    for i = 1:size(data_mat,2)                                              # Telt het aantal columns van data_mat, met 2 geven we de dims aan (voor size is andere manier om dims aan te geven)
-        if samples[i] == 1                                                  # Gaat kijken of er een samples aanwezig is => 1 = true en 0 = false
-            data_mat[vec(data_mat[:, i] .< 3*m), i].= 0                     # Kijken door de hele rij van de bijbehorende i of het getal < 3xm is, zo ja dan wordt dit een 0, want die nemen we niet mee
-        end                                                                     # want het signaal moet minimaal 3x de blanco zijn
+    for i = 1:size(data_mat,2)                              # Telt het aantal columns van data_mat, met 2 geven we de dims aan (voor size is andere manier om dims aan te geven)
+        if samples[i] == 1                                  # Gaat kijken of er een samples aanwezig is => 1 = true en 0 = false
+            data_mat[vec(data_mat[:, i] .< 3*m), i].= 0     # Kijken door de hele rij van de bijbehorende i of het getal < 3xm is, zo ja dan wordt dit een 0, want die nemen we niet mee
+        end                                                 # want het signaal moet minimaal 3x de blanco zijn
     end
 
-    data_mat_b_clean = data_mat[:,sortperm(names(data_mat))]                    # Sorteert de namen op abc. van de df, nu nummers ook bijelkaar
-    naam = names(data_mat_b_clean)                                              # Vector met alle namen
-    #samples = contains.(names(data_mat),"Set").& (.! blanco)
+    data_mat_b_clean = data_mat[:,sortperm(names(data_mat))]        # Sorteert de namen op abc. van de df, nu nummers ook bijelkaar
+    naam = names(data_mat_b_clean)                                  # Vector met alle namen) 
 
-    v = sum(Matrix(data_mat[!,samples[1:end]]).> 0, dims=2)                    # alle samlples bekijken > 0 --> naar 0
+    v = sum(Matrix(data_mat[!,samples[1:end]]).> 0, dims=2)         # alle samlples bekijken > 0 --> naar 0
 
     for u = 1:size(data_mat_b_clean,2)
         if (samples[u] == 1)
-            data_mat[!,u][vec(v .< length(samples)*0.10)].= 0                    # <2 = less than 50% present --> 0
+            data_mat[!,u][vec(v .< length(samples)*0.10)].= 0       # <2 = less than 50% present --> 0
         end
     end
 
-    for i = 1:size(data_mat_b_clean,2)                                      # Zelfde als vorige For statement
-        if (samples[i] == 1) .& (!contains.(naam[i],"Coch"))                # Coch standaarden eruit filteren
-            println(naam[i])                                                #
-            sn = split(split(naam[i]," ")[1],"_")[end]                      # sn = sample naam, AsB gedeelte selecteren --> split de naam bij de spatie en selecteerd het 1e stuk en daarna op _ filteren en het laatste stuk (AsB) slecteren
-            snum = split(split(naam[i]," ")[2],"-")[1]                      # snum = sample nummer selecteren, zelfde principe
-            sel = []                                                        # Lege vector creeeren
-            tempnm = naam[findall(contains.(naam,sn))]                        # sample type filteren
+    for i = 1:size(data_mat_b_clean,2)                          # Zelfde als vorige For statement
+        if (samples[i] == 1) .& (!contains.(naam[i],"Coch"))    # Coch standaarden eruit filteren
+            println(naam[i])                                                
+            sn = split(split(naam[i]," ")[1],"_")[end]          # sn = sample naam, AsB gedeelte selecteren --> split de naam bij de spatie en selecteerd het 1e stuk en daarna op _ filteren en het laatste stuk (AsB) slecteren
+            snum = split(split(naam[i]," ")[2],"-")[1]          # snum = sample nummer selecteren, zelfde principe
+            sel = []                                            # Lege vector creeeren
+            tempnm = naam[findall(contains.(naam,sn))]          # sample type filteren
 
             for k in tempnm
-                if split(k[length(split(naam[i]," ")[1])+2:end],"-")[1] == snum # Het nummer selecteren van de sample
-                    sel =[sel;k]                                                 # sel vullen met sel ; k, dus vector met alle samples die hetzelfde zijn
+                if split(k[length(split(naam[i]," ")[1])+2:end],"-")[1] == snum     # Het nummer selecteren van de sample
+                    sel =[sel;k]                                                    # sel vullen met sel ; k, dus vector met alle samples die hetzelfde zijn
                 end
             end
 
-            t = sum(Matrix(data_mat[!,sel[1:end]]).> 0, dims=2)             # geselecteerde kolomen t= true false van elke kolom/mz waarde
+            t = sum(Matrix(data_mat[!,sel[1:end]]).> 0, dims=2)     # geselecteerde kolomen t= true false van elke kolom/mz waarde
 
             for s in sel
-                data_mat[!,s][vec(t .< 2)].= 0                              # <2 = less than 50% present --> 0
+                data_mat[!,s][vec(t .< 2)].= 0                      # <2 = less than 50% present --> 0
             end
-
         end
     end
 
@@ -92,32 +74,32 @@ function blanco_clean_up(data_mat)                                          # da
 
 end
 
-z,samples = blanco_clean_up(ssc_neg_Intensities)                # z,samples zorgt ervoor dat de  
-z = z[vec(any(Matrix(z)[:,samples].!=0,dims=2)),:]              # alle rijen, die gelijk zijn aan -0 weg
+z,samples = blanco_clean_up(ssc_neg_Intensities)        # z,samples zorgt ervoor dat de  
+z = z[vec(any(Matrix(z)[:,samples].!=0,dims=2)),:]      # alle rijen, die gelijk zijn aan -0 weg
 
 ## Save data 
 SSC_neg = CSV.write("/Users/jianihu/Documents/PCA full negative/FeatureList_Aligned_$Charge _full_PLSDA $Sample $plotv.csv", z[:,samples])
 
-##PCA
+## PCA
 b = Matrix(z[:,samples])'
 cov(b)
 
-function standard(b)                    # Normalise the data
-    m = mean(b,dims=1)                  # mean berekenen
-    stdev = std(b,dims=1)               # stdev berekenen
-    bs = (b .- m) ./ stdev              # van alles de mean aftrekken en delen door de stdev => meancentering & scaling
+function standard(b)            # Normalise the data
+    m = mean(b,dims=1)          # mean berekenen
+    stdev = std(b,dims=1)       # stdev berekenen
+    bs = (b .- m) ./ stdev      # van alles de mean aftrekken en delen door de stdev => meancentering & scaling
     return bs
 end
 
-function pca2(bs)                                    # PCA function --> x = input data en pec = proportion of eigenvallue
+function pca2(bs)                                   # PCA function --> x = input data en pec = proportion of eigenvallue
     cov_mat=cov(bs)
-    value,vec_mat=eigen(cov_mat)                     # calculate eigenvalue & eigen matrix
+    value,vec_mat=eigen(cov_mat)                    # calculate eigenvalue & eigen matrix
     indices= sortperm(value ,rev=true)
-    explainvariance=(value[indices]) ./sum(value) # sort based on explained variance
+    explainvariance=(value[indices]) ./sum(value)   # sort based on explained variance
     eigenvecs = vec_mat[:,indices]
     loading = eigenvecs
-    scores = (eigenvecs' * bs')'                        # 3e' om orthagonal
-    return explainvariance, loading, scores
+    scores = (eigenvecs' * bs')'                   
+    return explainvariance, loading, scores         # local to global 
 end
 
 b = Matrix(z[:,samples])'
@@ -132,15 +114,15 @@ PC2 = round(explainvariance[2]; digits = 2)
 PC3 = round(explainvariance[3]; digits = 2)
 PC4 = round(explainvariance[4]; digits = 2)
 PC5 = round(explainvariance[5]; digits = 2)
-plot_explainV =
+plot_explainV =                                     # plotting explained variace in bars 
     bar(explainvariance[1:4])
     bar!(frame =:box, dpi = 120, legend = false)
     bar!(title = "$Sample $Charge Explained variance", titlefont = 14)
     bar!(xlabel = "Principle Component", ylabel = "Variance explained (%)", tickfont=font(12),guidefont=font(12))
     savefig("/Users/jianihu/Documents/PCA full negative/Explainedvariance plot $Sample $Charge $plotv.pdf")
 
-meting = names(z)[samples]
-y = zeros(size(meting))
+meting = names(z)[samples]                          # classifying the different plant species and extraction methods 
+y = zeros(size(meting))                             # total 23 variaties
 y[contains.(lowercase.(meting),"_asb 1-")] .= 1
 y[contains.(lowercase.(meting),"_asb 2-")] .= 1
 y[contains.(lowercase.(meting),"_asb 3-")] .= 1
@@ -261,7 +243,7 @@ y[contains.(lowercase.(meting),"_asb 97")] .= 2
 y[contains.(lowercase.(meting),"_asb 98")] .= 23
 class = fill("",length(y))
 
-y_pca = zeros(size(b,1),length(unique(y)))
+y_pca = zeros(size(b,1),length(unique(y)))      # coverting matrix to binaire data 
 yvalues = unique(y)
 for i = 1:length(unique(y))
     y_pca[y.== yvalues[i],i] .= 1
@@ -326,6 +308,7 @@ y3[contains.(class, "ADD historic sample - unknown")] .= "grey"
 y3[contains.(class, "Isatis tinctoria L.")] .= "gold1"
 Symbol.(y3)
 
+## plotting                                              
 PCA12 =
     scatter(scores[:,1], scores[:,2], group = class, markershape = Symbol.(y2), markercolor = Symbol.(y3), frame =:box, dpi = 120)
     scatter!(legend =:outerright, legendfont =8)

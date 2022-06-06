@@ -1,3 +1,5 @@
+##### Blank correction & PCA SVD and Eigen Decomposition script #####
+
 ## needed packages
 using DataFrames, XLSX, Statistics, Distributions, CSV, LinearAlgebra, Plots
 

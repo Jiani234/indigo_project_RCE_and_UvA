@@ -1,4 +1,6 @@
-## PLS DA
+##### PLS-DA script #####
+
+## needed packages
 using ScikitLearn, Plots, CSV, DataFrames, Statistics
 @sk_import cross_decomposition: PLSRegression
 

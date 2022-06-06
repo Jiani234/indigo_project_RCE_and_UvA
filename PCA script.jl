@@ -1,3 +1,13 @@
+##### PCA SVD and Eigen Decomposition script #####
+
+## needed packages
+using DataFrames, XLSX, Statistics, CSV, LinearAlgebra, Plots
+using ScikitLearn
+@sk_import decomposition: PCA
+
+## Import data after blank correction 
+data = CSV.read("/Users/jianihu/Documents/PCA full negative/FeatureList_Aligned_$Charge _full_PLSDA $Sample $plotv.csv", z[:,samples])
+data = b 
                                                 
 ## PCA Eigen Decomposition ##
 

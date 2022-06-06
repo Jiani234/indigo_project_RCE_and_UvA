@@ -77,10 +77,9 @@ end
 z,samples = blanco_clean_up(ssc_neg_Intensities)        # z,samples zorgt ervoor dat de  
 z = z[vec(any(Matrix(z)[:,samples].!=0,dims=2)),:]      # alle rijen, die gelijk zijn aan -0 weg
 
-## Save data 
+## Save import data after blank correction 
 SSC_neg = CSV.write("/Users/jianihu/Documents/PCA full negative/FeatureList_Aligned_$Charge _full_PLSDA $Sample $plotv.csv", z[:,samples])
 
-## PCA
 b = Matrix(z[:,samples])'
 cov(b)
 
@@ -90,6 +89,17 @@ function standard(b)            # Normalise the data
     bs = (b .- m) ./ stdev      # van alles de mean aftrekken en delen door de stdev => meancentering & scaling
     return bs
 end
+
+## binaire matrix ##                                            
+y_pca = zeros(size(b,1),length(unique(y)))
+yvalues = unique(y)
+for i = 1:length(unique(y))
+    y_pca[y.== yvalues[i],i] .= 1
+end
+
+b[b .> 0].= 1
+                                                
+## PCA Eigen Decomposition ##
 
 function pca2(bs)                                   # PCA function --> x = input data en pec = proportion of eigenvallue
     cov_mat=cov(bs)
@@ -108,19 +118,46 @@ bs = standard(b)
 explainvariance, loading, scores = pca2(bs)
 
 ## explainvariance plot
-explainvariance .*= 100
-PC1 = round(explainvariance[1]; digits = 2)
-PC2 = round(explainvariance[2]; digits = 2)
-PC3 = round(explainvariance[3]; digits = 2)
-PC4 = round(explainvariance[4]; digits = 2)
-PC5 = round(explainvariance[5]; digits = 2)
-plot_explainV =                                     # plotting explained variace in bars 
+explainvariance*100
+PC1 = round(decimal(explainvariance[1]), digits = 4)*100
+PC2 = round(decimal(explainvariance[2]), digits = 4)*100
+PC3 = round(decimal(explainvariance[3]), digits = 4)*100
+PC4 = round(decimal(explainvariance[4]), digits = 4)*100
+                                            
+plot_explainV =                                     # plotting explained variace in barplot 
     bar(explainvariance[1:4])
     bar!(frame =:box, dpi = 120, legend = false)
     bar!(title = "$Sample $Charge Explained variance", titlefont = 14)
     bar!(xlabel = "Principle Component", ylabel = "Variance explained (%)", tickfont=font(12),guidefont=font(12))
     savefig("/Users/jianihu/Documents/PCA full negative/Explainedvariance plot $Sample $Charge $plotv.pdf")
 
+## PCA SVD ##  
+pca = PCA(n_components=5)
+println("start")
+pca.fit(b)
+
+variance_e = pca.explained_variance_ratio_
+
+scores = pca.fit_transform(b)
+loadings = pca.components_
+
+# explainvariance, loading, scores = pca2(b)
+println("end")
+
+pca100 = pca.explained_variance_ratio_*100
+PC1 = round(decimal(pca.explained_variance_ratio_[1]), digits = 4)*100
+PC2 = round(decimal(pca.explained_variance_ratio_[2]), digits = 4)*100
+PC3 = round(decimal(pca.explained_variance_ratio_[3]), digits = 4)*100
+PC4 = round(decimal(pca.explained_variance_ratio_[4]), digits = 4)*100
+
+barplot = 
+bar(pca100[1:4])
+bar!(frame =:box, dpi = 120, legend = false)
+bar!(title = "$Sample $Charge Explained variance")
+bar!(xlabel = "Principle Component", ylabel = "Variance explained (%)")
+savefig("$path2file/Explainedvariance plot $Charge $Sample $plotv.pdf")
+
+## Plotting & Classification ##                                              
 meting = names(z)[samples]                          # classifying the different plant species and extraction methods 
 y = zeros(size(meting))                             # total 23 variaties
 y[contains.(lowercase.(meting),"_asb 1-")] .= 1
@@ -243,13 +280,6 @@ y[contains.(lowercase.(meting),"_asb 97")] .= 2
 y[contains.(lowercase.(meting),"_asb 98")] .= 23
 class = fill("",length(y))
 
-y_pca = zeros(size(b,1),length(unique(y)))      # coverting matrix to binaire data 
-yvalues = unique(y)
-for i = 1:length(unique(y))
-    y_pca[y.== yvalues[i],i] .= 1
-end
-b[b .> 0].= 1
-
 #SS1
 class[y.==1] .= "MME Strobilanthes cusia (Nees) Kuntze"
 class[y.==2] .= "MME Wrightia laevis Hook.f."
@@ -369,7 +399,7 @@ PCA34
     scatter!(title = "$Sample $Charge PCA 2D Plot - PC3 vs PC4", titlefont = 14)
     savefig("/Users/jianihu/Documents/PCA full negative/$Sample $Charge $plotv PCA_3vs4.pdf")
 
-## Extract loadings 
+## Extract loadings ## 
 LoadPC1 = sortperm(abs.(loading[:, 1]))[end-9:end]
 LoadPC1 = z[LoadPC1,:]
 LPC1 = CSV.write("/Users/jianihu/Documents/PCA full negative/$T1 $Sample $Charge $plotv loading1.csv",LoadPC1)

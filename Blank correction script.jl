@@ -7,7 +7,7 @@ using DataFrames, XLSX, Statistics, CSV, LinearAlgebra, Plots
 ssc_neg_Intensities = DataFrame(XLSX.readtable("/Users/jianihu/Documents/FeatureList_Aligned_Full_Neg.xlsx","Intensities")...)      # Data import
 ssc_neg_Intensities = ssc_neg_Intensities[ 3 .< ssc_neg_Intensities[!,"AverageRT"] .<30 ,:]                                         # Selecting chromatogram data between 3.0 - 30 min
 
-## file in sample information 
+## file in sample information - Change per imput
 Sample = "SS All"       # Sample set 
 Charge = "Negative"     # Negative or Positive mode 
 plotv = "V1"            # version of plots 
@@ -16,6 +16,7 @@ T1 = "PCA"              # PCA or PLSDA
 ## Matrix clean up
 # Blanco signal correction
 function blanco_clean_up(data_mat)                      # data_mat = ss1_pos_Intensities of een andere
+    samples = zeros(Bool,size(data_mat,2))
     blanco = contains.(names(data_mat),"Blanco")        # Blanco eruit filteren voor de correctie
     standaard = contains.(names(data_mat),"Coch")       # Coch calibration sample filter
     ADD = contains.(names(data_mat),"ADD")              # ADD sample filter
@@ -29,7 +30,7 @@ function blanco_clean_up(data_mat)                      # data_mat = ss1_pos_Int
     WrB = contains.(names(data_mat),"WrB")
     trade = contains.(names(data_mat),"trade")
     
-    samples = contains.(names(data_mat),"SS") .& (.! blanco) .& (.! standaard) # First part selecting the data and second part erasing/converting the other data to 0 
+    samples[contains.(names(data_mat),"SS2").& (.! blanco) .& (.! standaard)] .= 1 # First part selecting the data and second part erasing/converting the other data to 0 
     
     m = mean(Matrix(data_mat[:, blanco]), dims=2)           # Mean berekening van de 2e dims --> alle rijen
 
@@ -72,7 +73,7 @@ function blanco_clean_up(data_mat)                      # data_mat = ss1_pos_Int
         end
     end
 
-    return data_mat, samples
+    return data_mat, samples                            # return data_mat and samples
 
 end
 
@@ -80,7 +81,7 @@ z,samples = blanco_clean_up(ssc_neg_Intensities)        # z,samples zorgt ervoor
 z = z[vec(any(Matrix(z)[:,samples].!=0,dims=2)),:]      # alle rijen, die gelijk zijn aan -0 weg
 
 ## Save import data after blank correction 
-SSC_neg = CSV.write("/Users/jianihu/Documents/PCA full negative/FeatureList_Aligned_$Charge _full_PLSDA $Sample $plotv.csv", z[:,samples])
+SSC_neg = CSV.write("/Users/jianihu/Documents/PCA full negative/FeatureList_Aligned_$Charge _full_PLSDA $Sample $plotv.csv", z)
 
 b = Matrix(z[:,samples])'
 cov(b)
